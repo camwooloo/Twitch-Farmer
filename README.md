@@ -10,6 +10,12 @@ It wraps two proven open-source miners behind one polished UI:
 - **Points & predictions** — [rdavydov/Twitch-Channel-Points-Miner-v2](https://github.com/rdavydov/Twitch-Channel-Points-Miner-v2) (GPLv3)
 - **Drops campaigns** — [DevilXD/TwitchDropsMiner](https://github.com/DevilXD/TwitchDropsMiner) (GPLv3), run **headless** (its tkinter GUI is replaced by an event adapter)
 
+![Twitch Farmer](docs/screenshot.png)
+
+## Download
+
+Grab the latest installer from the [**Releases**](https://github.com/camwooloo/Twitch-Farmer/releases/latest) page — run it (per-user, no admin needed). Requires the WebView2 runtime (preinstalled on Windows 10/11).
+
 ## Features
 
 - 🎛 **Full configuration UI** — account, streamer list, per-streamer overrides,

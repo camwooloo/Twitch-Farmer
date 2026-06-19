@@ -1,0 +1,24 @@
+# --- Backend server ---
+aiohttp>=3.9,<4.0
+
+# --- rdavydov points miner (P2) ---
+requests
+websocket-client
+pillow
+python-dateutil
+emoji
+millify
+colorama
+flask
+irc
+pytz
+validators
+# pandas is only needed for the optional analytics server; kept out of the
+# frozen core to slim the bundle. Install manually if analytics is enabled.
+
+# --- DevilXD drops miner (P3) ---
+truststore
+pywin32; sys_platform == "win32"
+
+# --- packaging ---
+pyinstaller

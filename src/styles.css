@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #0e0b16;
+  --color-bg-soft: #15111f;
+  --color-surface: #1b1626;
+  --color-surface-2: #221b30;
+  --color-border: #2e2740;
+  --color-accent: #9146ff;
+  --color-accent-soft: #a970ff;
+  --color-good: #2dd4a7;
+  --color-bad: #ff5d6c;
+  --color-warn: #ffb454;
+  --color-text: #ece9f5;
+  --color-muted: #9b93b4;
+
+  --font-sans: "Inter", "Segoe UI", system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+/* app gradient backdrop */
+.app-bg {
+  background:
+    radial-gradient(1100px 600px at 12% -10%, rgba(145, 70, 255, 0.18), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, rgba(45, 212, 167, 0.08), transparent 55%),
+    var(--color-bg);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-surface-2);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border);
+  background-clip: content-box;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.live-dot {
+  animation: pulse-dot 1.4s ease-in-out infinite;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-in {
+  animation: fade-in 0.25s ease-out both;
+}

@@ -35,6 +35,13 @@ def run(config_path: str) -> None:
         except Exception:
             pass
 
+    # OS cert store for reliable HTTPS across machines (matches DevilXD's main.py)
+    try:
+        import truststore
+        truststore.inject_into_ssl()
+    except Exception:
+        pass
+
     sys.path.insert(0, _vendor_path())
 
     with open(config_path, "r", encoding="utf-8") as fh:

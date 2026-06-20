@@ -1,6 +1,6 @@
 [package]
 name = "twitch-farmer"
-version = "0.1.2"
+version = "0.1.3"
 description = "Twitch Farmer — points & drops miner"
 authors = ["Aurora"]
 edition = "2021"

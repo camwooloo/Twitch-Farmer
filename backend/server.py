@@ -331,11 +331,22 @@ _STATUS_SETS = {
 
 
 async def get_badges(_request: web.Request) -> web.Response:
-    """All Twitch badges, categorised (watch/event, subscription, bits, status)."""
+    """All Twitch badges, categorised, with which ones you own."""
     global _http
     if _http is None:
         _http = aiohttp.ClientSession()
     cats: dict[str, list] = {"watch": [], "subscription": [], "bits": [], "status": []}
+
+    # which badges does the signed-in user own?
+    owned: set[str] = set()
+    try:
+        data = await _gql_auth({"query": "{currentUser{availableBadges{setID}}}"})
+        for b in (((data or {}).get("data") or {}).get("currentUser") or {}).get("availableBadges") or []:
+            if b.get("setID"):
+                owned.add(b["setID"])
+    except Exception:
+        pass
+
     try:
         async with _http.post(
             "https://gql.twitch.tv/gql",
@@ -350,7 +361,10 @@ async def get_badges(_request: web.Request) -> web.Response:
             if not sid or sid in seen:
                 continue
             seen.add(sid)
-            entry = {"id": sid, "title": b.get("title") or sid, "image": b.get("imageURL")}
+            entry = {
+                "id": sid, "title": b.get("title") or sid,
+                "image": b.get("imageURL"), "owned": sid in owned,
+            }
             if _SUB_RE.search(sid):
                 cats["subscription"].append(entry)
             elif _BITS_RE.search(sid):
@@ -360,10 +374,10 @@ async def get_badges(_request: web.Request) -> web.Response:
             else:
                 cats["watch"].append(entry)
         for k in cats:
-            cats[k].sort(key=lambda e: e["title"].lower())
+            cats[k].sort(key=lambda e: (not e["owned"], e["title"].lower()))
     except Exception:
         pass
-    return web.json_response({"categories": cats})
+    return web.json_response({"categories": cats, "owned_count": len(owned)})
 
 
 GITHUB_REPO = "camwooloo/Twitch-Farmer"
@@ -525,6 +539,14 @@ async def _on_startup(_app: web.Application) -> None:
 
 def main() -> None:
     global TOKEN
+    # Use the OS certificate store so HTTPS (GitHub API, Twitch GQL) works
+    # reliably across machines, even in the frozen build.
+    try:
+        import truststore
+        truststore.inject_into_ssl()
+    except Exception:
+        pass
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8917)

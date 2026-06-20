@@ -24,7 +24,7 @@ binaries = []
 hiddenimports = [
     # backend + points stack
     "aiohttp", "colorama", "requests", "websocket", "emoji", "millify",
-    "validators", "pytz", "flask",
+    "validators", "pytz", "flask", "truststore", "certifi",
     "dateutil", "dateutil.tz", "dateutil.relativedelta", "dateutil.parser",
     "irc", "irc.client", "irc.bot", "irc.connection", "irc.strings",
     # child entry points
@@ -36,7 +36,8 @@ hiddenimports = [
 ]
 
 # emoji + irc ship data / many submodules — collect them wholesale.
-for pkg in ("emoji", "irc"):
+# certifi ships its CA bundle as data.
+for pkg in ("emoji", "irc", "certifi"):
     d, b, h = collect_all(pkg)
     datas += d
     binaries += b

@@ -120,6 +120,7 @@ export interface BadgeItem {
   id: string;
   title: string;
   image: string | null;
+  owned: boolean;
 }
 export interface BadgeCategories {
   watch: BadgeItem[];

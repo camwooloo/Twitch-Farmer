@@ -93,9 +93,14 @@ interface AppState {
   currentVersion: string;
   releases: Release[];
   updateDismissed: boolean;
+  checking: boolean;
+  justUpdatedTo: string | null;
+  autoUpdating: boolean;
   loadReleases: () => Promise<void>;
+  checkForUpdates: () => Promise<void>;
   installUpdate: (url: string) => Promise<void>;
   dismissUpdate: () => void;
+  dismissUpdatedNotice: () => void;
 }
 
 export interface Release {
@@ -154,6 +159,9 @@ export const useStore = create<AppState>((set, get) => ({
   currentVersion: "",
   releases: [],
   updateDismissed: false,
+  checking: false,
+  justUpdatedTo: null,
+  autoUpdating: false,
 
   init: async () => {
     let info: BackendInfo;
@@ -172,7 +180,29 @@ export const useStore = create<AppState>((set, get) => ({
     } catch {
       /* non-Tauri dev */
     }
-    get().loadReleases();
+    await get().loadReleases();
+
+    // "you've been updated" notice when the version changed since last run
+    const cur = get().currentVersion;
+    if (cur) {
+      const last = localStorage.getItem("tf_last_version");
+      if (last && last !== cur && isNewer(cur, last)) {
+        set({ justUpdatedTo: cur });
+      }
+      localStorage.setItem("tf_last_version", cur);
+    }
+
+    // auto-update: silently install a newer release if enabled
+    const latest = get().releases[0];
+    const cfg = get().config;
+    if (cfg?.app.auto_update && latest && cur && isNewer(latest.tag, cur) && latest.exe_url) {
+      set({ autoUpdating: true });
+      try {
+        await get().installUpdate(latest.exe_url);
+      } catch {
+        set({ autoUpdating: false }); // fall back to the manual prompt
+      }
+    }
   },
 
   api: async (path, init) => {
@@ -300,6 +330,15 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
+  checkForUpdates: async () => {
+    set({ checking: true, updateDismissed: false });
+    try {
+      await get().loadReleases();
+    } finally {
+      set({ checking: false });
+    }
+  },
+
   installUpdate: async (url) => {
     const res = await get().api("/api/update/download", {
       method: "POST",
@@ -307,10 +346,16 @@ export const useStore = create<AppState>((set, get) => ({
     });
     const { path, error } = await res.json();
     if (error || !path) throw new Error(error || "download failed");
-    await shellOpen(path); // launches the NSIS installer; it updates in place
+    // run the installer silently and relaunch the app (closes this app first)
+    try {
+      await invoke("apply_update", { installer: path });
+    } catch {
+      await shellOpen(path); // fallback: open the installer normally
+    }
   },
 
   dismissUpdate: () => set({ updateDismissed: true }),
+  dismissUpdatedNotice: () => set({ justUpdatedTo: null }),
 }));
 
 // "v1.2.3" -> [1,2,3]; higher tuple wins

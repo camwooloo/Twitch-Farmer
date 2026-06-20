@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
-import { useStore } from "../lib/store";
-import { Section, Field, Toggle, Select, TextInput, Badge } from "../components/ui";
+import { RefreshCw, Download, CheckCircle2, Loader2 } from "lucide-react";
+import { useStore, isNewer } from "../lib/store";
+import { Section, Field, Toggle, Select, TextInput, Badge, Button } from "../components/ui";
 import { Account } from "./Account";
 import { Notifications } from "./Notifications";
 import { ReleaseNotes } from "../components/UpdateModal";
@@ -21,6 +22,67 @@ const ACCENTS = [
   { value: "#ffb454", label: "Amber" },
   { value: "#4f8cff", label: "Azure" },
 ];
+
+function UpdateSettings() {
+  const { currentVersion, releases, checking } = useStore();
+  const config = useStore((s) => s.config)!;
+  const save = useStore((s) => s.saveConfig);
+  const check = useStore((s) => s.checkForUpdates);
+  const install = useStore((s) => s.installUpdate);
+  const [state, setState] = useState<"idle" | "working">("idle");
+
+  const latest = releases[0];
+  const available = !!latest && !!currentVersion && isNewer(latest.tag, currentVersion);
+
+  return (
+    <Section title="Updates" description="Keep Twitch Farmer up to date.">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-3">
+        <div className="flex items-center gap-2 text-sm">
+          {available ? (
+            <>
+              <Download size={16} className="text-[var(--color-accent-soft)]" />
+              Update available: <b>{latest.tag}</b>
+              <span className="text-xs text-[var(--color-muted)]">(you have v{currentVersion})</span>
+            </>
+          ) : (
+            <>
+              <CheckCircle2 size={16} className="text-[var(--color-good)]" />
+              You're on the latest version <b>v{currentVersion || "—"}</b>
+            </>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" onClick={check} disabled={checking}>
+            <RefreshCw size={14} className={checking ? "animate-spin" : ""} /> Check now
+          </Button>
+          {available && latest.exe_url && (
+            <Button
+              variant="primary"
+              disabled={state === "working"}
+              onClick={async () => {
+                setState("working");
+                try {
+                  await install(latest.exe_url!);
+                } catch {
+                  setState("idle");
+                }
+              }}
+            >
+              {state === "working" ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+              {state === "working" ? "Updating…" : "Update now"}
+            </Button>
+          )}
+        </div>
+      </div>
+      <Toggle
+        label="Update automatically"
+        description="Download and install new versions on launch, then reopen with the patch notes."
+        checked={config.app.auto_update}
+        onChange={(v) => save({ app: { auto_update: v } })}
+      />
+    </Section>
+  );
+}
 
 function Changelog() {
   const releases = useStore((s) => s.releases);
@@ -214,7 +276,8 @@ export function Settings() {
         />
       </Section>
 
-      <GroupLabel>What's new</GroupLabel>
+      <GroupLabel>Updates</GroupLabel>
+      <UpdateSettings />
       <Changelog />
 
       <div className="flex items-center gap-2 pb-4 text-xs text-[var(--color-muted)]">

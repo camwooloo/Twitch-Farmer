@@ -181,6 +181,7 @@ class AppSettings:
     theme: str = "dark"
     accent: str = "#9146FF"           # Twitch purple
     autostart_mining: bool = False    # begin mining as soon as the app launches
+    auto_update: bool = True          # download + install new releases automatically
 
 
 # --------------------------------------------------------------------------- #

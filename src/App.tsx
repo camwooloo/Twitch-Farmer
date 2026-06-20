@@ -17,7 +17,7 @@ import {
 import clsx from "clsx";
 import { useStore } from "./lib/store";
 import { LoginModal } from "./components/LoginModal";
-import { UpdateModal } from "./components/UpdateModal";
+import { UpdateModal, UpdatedNotice, AutoUpdatingOverlay } from "./components/UpdateModal";
 import { Dashboard } from "./pages/Dashboard";
 import { Points } from "./pages/Points";
 import { Predictions } from "./pages/Predictions";
@@ -264,6 +264,8 @@ export default function App() {
       <Shell />
       <LoginModal />
       <UpdateModal />
+      <UpdatedNotice />
+      <AutoUpdatingOverlay />
     </HashRouter>
   );
 }

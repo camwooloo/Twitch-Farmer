@@ -50,6 +50,30 @@ fn show_main_window(app: tauri::AppHandle) {
     }
 }
 
+/// Run a downloaded installer silently, then relaunch the app, then quit.
+/// The installer's NSIS pre-install hook closes this app + backend first.
+#[tauri::command]
+fn apply_update(app: tauri::AppHandle, installer: String) -> Result<(), String> {
+    let exe = std::env::current_exe().map_err(|e| e.to_string())?;
+    let exe_str = exe.to_string_lossy().to_string();
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        // sequential in cmd: install silently -> short wait -> relaunch the app
+        let line = format!(
+            "\"{}\" /S & ping -n 4 127.0.0.1 >nul & start \"\" \"{}\"",
+            installer, exe_str
+        );
+        std::process::Command::new("cmd")
+            .args(["/C", &line])
+            .creation_flags(0x0000_0008 | 0x0800_0000) // DETACHED_PROCESS | CREATE_NO_WINDOW
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+    app.exit(0);
+    Ok(())
+}
+
 // ----------------------------------------------------------------------- //
 // helpers
 // ----------------------------------------------------------------------- //
@@ -161,7 +185,7 @@ pub fn run() {
             token: token.clone(),
             child: Mutex::new(None),
         })
-        .invoke_handler(tauri::generate_handler![backend_info, show_main_window])
+        .invoke_handler(tauri::generate_handler![backend_info, show_main_window, apply_update])
         .setup(move |app| {
             let handle = app.handle().clone();
 

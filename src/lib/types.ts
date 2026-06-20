@@ -99,6 +99,7 @@ export interface AppSettings {
   theme: string;
   accent: string;
   autostart_mining: boolean;
+  auto_update: boolean;
 }
 export interface Config {
   username: string;

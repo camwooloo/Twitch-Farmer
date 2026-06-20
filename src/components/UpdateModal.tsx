@@ -51,6 +51,56 @@ export function ReleaseNotes({ notes }: { notes: string }) {
   );
 }
 
+export function AutoUpdatingOverlay() {
+  const autoUpdating = useStore((s) => s.autoUpdating);
+  if (!autoUpdating) return null;
+  return (
+    <div className="fixed inset-0 z-[1100] grid place-items-center bg-[var(--color-bg)]/90 backdrop-blur">
+      <div className="flex flex-col items-center gap-3 text-center">
+        <div className="grid h-14 w-14 place-items-center rounded-2xl bg-[var(--color-accent)] text-white shadow-[0_8px_24px_-8px_var(--color-accent)]">
+          <Download size={26} />
+        </div>
+        <div className="text-sm font-semibold">Installing update…</div>
+        <div className="flex items-center gap-2 text-xs text-[var(--color-muted)]">
+          <Loader2 size={13} className="animate-spin" /> Twitch Farmer will reopen automatically.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function UpdatedNotice() {
+  const version = useStore((s) => s.justUpdatedTo);
+  const releases = useStore((s) => s.releases);
+  const dismiss = useStore((s) => s.dismissUpdatedNotice);
+  if (!version) return null;
+  const rel = releases.find((r) => r.tag.replace(/^v/, "") === version) ?? releases[0];
+
+  return (
+    <div className="fixed inset-0 z-[1000] grid place-items-center bg-black/60 backdrop-blur-sm">
+      <div className="fade-in w-[min(460px,92vw)] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-2xl">
+        <div className="flex items-center gap-3">
+          <div className="grid h-11 w-11 place-items-center rounded-xl bg-[var(--color-good)]/20 text-[var(--color-good)]">
+            <CheckCircle2 size={22} />
+          </div>
+          <div>
+            <div className="text-base font-semibold">Updated to v{version}</div>
+            <div className="text-xs text-[var(--color-muted)]">Here's what changed.</div>
+          </div>
+        </div>
+        {rel && (
+          <div className="mt-4 max-h-64 overflow-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-soft)] p-3">
+            <ReleaseNotes notes={rel.notes} />
+          </div>
+        )}
+        <Button variant="primary" className="mt-4 w-full py-2.5" onClick={dismiss}>
+          Got it
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function UpdateModal() {
   const { releases, currentVersion, updateDismissed } = useStore();
   const dismiss = useStore((s) => s.dismissUpdate);

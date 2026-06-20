@@ -1,8 +1,9 @@
 import { create } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
-import { getVersion } from "@tauri-apps/api/app";
 import { open as shellOpen } from "@tauri-apps/plugin-shell";
 import type { Config, EngineState, LogEntry, DeepPartial } from "./types";
+
+declare const __APP_VERSION__: string;
 
 interface BackendInfo {
   port: number;
@@ -175,11 +176,8 @@ export const useStore = create<AppState>((set, get) => ({
     await waitForBackend(info);
     connectWs(info, set, get);
     await get().loadConfig();
-    try {
-      set({ currentVersion: await getVersion() });
-    } catch {
-      /* non-Tauri dev */
-    }
+    // version is baked in at build time (reliable; runtime getVersion can fail)
+    set({ currentVersion: typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "" });
     await get().loadReleases();
 
     // "you've been updated" notice when the version changed since last run

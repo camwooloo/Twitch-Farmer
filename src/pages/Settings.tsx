@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
-import { RefreshCw, Download, CheckCircle2, Loader2 } from "lucide-react";
+import { RefreshCw, Download, CheckCircle2, Loader2, FolderOpen } from "lucide-react";
+import { invoke } from "@tauri-apps/api/core";
 import { useStore, isNewer } from "../lib/store";
 import { Section, Field, Toggle, Select, TextInput, Badge, Button } from "../components/ui";
 import { Account } from "./Account";
@@ -280,9 +281,15 @@ export function Settings() {
       <UpdateSettings />
       <Changelog />
 
-      <div className="flex items-center gap-2 pb-4 text-xs text-[var(--color-muted)]">
+      <div className="flex flex-wrap items-center gap-3 pb-4 text-xs text-[var(--color-muted)]">
         <Badge tone="neutral">v{currentVersion || "0.1.0"}</Badge>
-        Config stored in %APPDATA%\TwitchFarmer\config.json
+        <button
+          onClick={() => invoke("open_data_folder").catch(() => {})}
+          className="flex items-center gap-1.5 rounded-md px-2 py-1 hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)]"
+        >
+          <FolderOpen size={13} /> Open data folder
+        </button>
+        <span>config, logs &amp; cookies in %APPDATA%\TwitchFarmer</span>
       </div>
     </div>
   );

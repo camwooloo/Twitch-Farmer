@@ -50,6 +50,15 @@ fn show_main_window(app: tauri::AppHandle) {
     }
 }
 
+/// Open %APPDATA%\TwitchFarmer (config, logs, cookies) in Explorer.
+#[tauri::command]
+fn open_data_folder() {
+    if let Some(appdata) = std::env::var_os("APPDATA") {
+        let p = PathBuf::from(appdata).join("TwitchFarmer");
+        let _ = std::process::Command::new("explorer").arg(p).spawn();
+    }
+}
+
 /// Run a downloaded installer silently, then relaunch the app, then quit.
 /// The installer's NSIS pre-install hook closes this app + backend first.
 #[tauri::command]
@@ -185,7 +194,12 @@ pub fn run() {
             token: token.clone(),
             child: Mutex::new(None),
         })
-        .invoke_handler(tauri::generate_handler![backend_info, show_main_window, apply_update])
+        .invoke_handler(tauri::generate_handler![
+            backend_info,
+            show_main_window,
+            apply_update,
+            open_data_folder
+        ])
         .setup(move |app| {
             let handle = app.handle().clone();
 

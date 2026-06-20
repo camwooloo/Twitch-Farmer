@@ -318,6 +318,54 @@ async def search_channels(request: web.Request) -> web.Response:
 # --------------------------------------------------------------------------- #
 # Analytics — read the points-over-time series the miner records
 # --------------------------------------------------------------------------- #
+import re as _re
+
+_SUB_RE = _re.compile(r"subscriber|sub-gift|founder|premium", _re.I)
+_BITS_RE = _re.compile(r"bits|cheer", _re.I)
+_STAFF_RE = _re.compile(r"years-as-twitch-staff|^staff$|^admin$", _re.I)
+_STATUS_SETS = {
+    "staff", "admin", "global_mod", "moderator", "broadcaster", "vip", "partner",
+    "turbo", "ambassador", "verified", "no_audio", "no_video", "game-developer",
+    "twitch-recap", "clip-champ", "artist-badge", "extension", "moments",
+}
+
+
+async def get_badges(_request: web.Request) -> web.Response:
+    """All Twitch badges, categorised (watch/event, subscription, bits, status)."""
+    global _http
+    if _http is None:
+        _http = aiohttp.ClientSession()
+    cats: dict[str, list] = {"watch": [], "subscription": [], "bits": [], "status": []}
+    try:
+        async with _http.post(
+            "https://gql.twitch.tv/gql",
+            headers={"Client-ID": TWITCH_CLIENT_ID},
+            json={"query": "{badges{setID version title imageURL}}"},
+            timeout=aiohttp.ClientTimeout(total=10),
+        ) as resp:
+            data = await resp.json()
+        seen = set()
+        for b in (data.get("data") or {}).get("badges") or []:
+            sid = b.get("setID", "")
+            if not sid or sid in seen:
+                continue
+            seen.add(sid)
+            entry = {"id": sid, "title": b.get("title") or sid, "image": b.get("imageURL")}
+            if _SUB_RE.search(sid):
+                cats["subscription"].append(entry)
+            elif _BITS_RE.search(sid):
+                cats["bits"].append(entry)
+            elif sid in _STATUS_SETS or _STAFF_RE.search(sid):
+                cats["status"].append(entry)
+            else:
+                cats["watch"].append(entry)
+        for k in cats:
+            cats[k].sort(key=lambda e: e["title"].lower())
+    except Exception:
+        pass
+    return web.json_response({"categories": cats})
+
+
 GITHUB_REPO = "camwooloo/Twitch-Farmer"
 
 
@@ -445,6 +493,7 @@ def make_app() -> web.Application:
         web.get("/api/twitch/channels", search_channels),
         web.get("/api/twitch/follows", get_follows),
         web.get("/api/twitch/channel", get_channel),
+        web.get("/api/twitch/badges", get_badges),
         web.get("/api/updates", get_updates),
         web.post("/api/update/download", download_update),
         web.get("/api/analytics", get_analytics),

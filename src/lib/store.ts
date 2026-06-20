@@ -78,6 +78,7 @@ interface AppState {
   fetchAnalytics: () => Promise<Record<string, { x: number; y: number }[]>>;
   fetchFollows: () => Promise<{ login: string; name: string; image?: string }[]>;
   fetchChannel: (login: string) => Promise<ChannelInfo>;
+  fetchBadges: () => Promise<BadgeCategories>;
 
   // cached + throttled live data shared across views
   follows: { login: string; name: string; image?: string }[];
@@ -113,6 +114,18 @@ export interface ChannelInfo {
   game: string | null;
   viewers: number;
   rewards: { title: string; cost: number; image?: string }[];
+}
+
+export interface BadgeItem {
+  id: string;
+  title: string;
+  image: string | null;
+}
+export interface BadgeCategories {
+  watch: BadgeItem[];
+  subscription: BadgeItem[];
+  bits: BadgeItem[];
+  status: BadgeItem[];
 }
 
 const MAX_LOGS = 1000;
@@ -230,6 +243,15 @@ export const useStore = create<AppState>((set, get) => ({
   fetchChannel: async (login) => {
     const res = await get().api(`/api/twitch/channel?login=${encodeURIComponent(login)}`);
     return (await res.json()) as ChannelInfo;
+  },
+
+  fetchBadges: async () => {
+    try {
+      const res = await get().api("/api/twitch/badges");
+      return (await res.json()).categories as BadgeCategories;
+    } catch {
+      return { watch: [], subscription: [], bits: [], status: [] };
+    }
   },
 
   loadFollows: async () => {

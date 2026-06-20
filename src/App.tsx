@@ -5,6 +5,7 @@ import {
   Coins,
   Dices,
   Gift,
+  Award,
   ScrollText,
   Settings as SettingsIcon,
   Play,
@@ -21,6 +22,7 @@ import { Dashboard } from "./pages/Dashboard";
 import { Points } from "./pages/Points";
 import { Predictions } from "./pages/Predictions";
 import { Drops } from "./pages/Drops";
+import { Badges } from "./pages/Badges";
 import { Logs } from "./pages/Logs";
 import { Settings } from "./pages/Settings";
 
@@ -29,6 +31,7 @@ const NAV = [
   { to: "/points", label: "Points", icon: Coins },
   { to: "/predictions", label: "Predictions", icon: Dices },
   { to: "/drops", label: "Drops", icon: Gift },
+  { to: "/badges", label: "Badges", icon: Award },
   { to: "/logs", label: "Logs", icon: ScrollText },
   { to: "/settings", label: "Settings", icon: SettingsIcon },
 ];
@@ -218,6 +221,7 @@ function Shell() {
               <Route path="/points" element={<Points />} />
               <Route path="/predictions" element={<Predictions />} />
               <Route path="/drops" element={<Drops />} />
+              <Route path="/badges" element={<Badges />} />
               <Route path="/logs" element={<Logs />} />
               <Route path="/settings" element={<Settings />} />
             </Routes>

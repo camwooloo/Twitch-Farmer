@@ -240,6 +240,20 @@ export default function App() {
     init();
   }, [init]);
 
+  // tray "Start/Stop farming" menu items
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    import("@tauri-apps/api/event")
+      .then(({ listen }) =>
+        listen<string>("tray-control", (e) => {
+          useStore.getState().control("all", e.payload === "stop" ? "stop" : "start");
+        }),
+      )
+      .then((u) => (unlisten = u))
+      .catch(() => {});
+    return () => unlisten?.();
+  }, []);
+
   useEffect(() => {
     if (config?.app.accent) {
       document.documentElement.style.setProperty("--color-accent", config.app.accent);

@@ -17,7 +17,7 @@ use serde::Serialize;
 use tauri::{
     menu::{MenuBuilder, MenuItemBuilder},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Manager, RunEvent, WindowEvent,
+    Emitter, Manager, RunEvent, WindowEvent,
 };
 
 #[derive(Default)]
@@ -195,8 +195,12 @@ pub fn run() {
 
             // --- system tray ---
             let show = MenuItemBuilder::with_id("show", "Show Twitch Farmer").build(app)?;
+            let start = MenuItemBuilder::with_id("start", "Start farming").build(app)?;
+            let stop = MenuItemBuilder::with_id("stop", "Stop farming").build(app)?;
             let quit = MenuItemBuilder::with_id("quit", "Quit").build(app)?;
-            let menu = MenuBuilder::new(app).items(&[&show, &quit]).build()?;
+            let menu = MenuBuilder::new(app)
+                .items(&[&show, &start, &stop, &quit])
+                .build()?;
 
             let _tray = TrayIconBuilder::with_id("main-tray")
                 .icon(app.default_window_icon().unwrap().clone())
@@ -210,6 +214,13 @@ pub fn run() {
                             let _ = win.unminimize();
                             let _ = win.set_focus();
                         }
+                    }
+                    // forwarded to the front-end, which calls the engine control API
+                    "start" => {
+                        let _ = app.emit("tray-control", "start");
+                    }
+                    "stop" => {
+                        let _ = app.emit("tray-control", "stop");
                     }
                     "quit" => app.exit(0),
                     _ => {}
@@ -241,13 +252,23 @@ pub fn run() {
 
             Ok(())
         })
-        .on_window_event(|window, event| {
-            if let WindowEvent::CloseRequested { api, .. } = event {
+        .on_window_event(|window, event| match event {
+            WindowEvent::CloseRequested { api, .. } => {
                 if config_flag("close_to_tray", true) {
                     let _ = window.hide();
                     api.prevent_close();
                 }
             }
+            // minimize-to-tray: when the window is minimized, hide it to the tray
+            WindowEvent::Resized(_) => {
+                if config_flag("minimize_to_tray", true)
+                    && window.is_minimized().unwrap_or(false)
+                {
+                    let _ = window.unminimize();
+                    let _ = window.hide();
+                }
+            }
+            _ => {}
         })
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

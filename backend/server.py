@@ -320,24 +320,35 @@ async def search_channels(request: web.Request) -> web.Response:
 # --------------------------------------------------------------------------- #
 import re as _re
 
-_SUB_RE = _re.compile(r"subscriber|sub-gift|founder|premium", _re.I)
-_BITS_RE = _re.compile(r"bits|cheer", _re.I)
-_STAFF_RE = _re.compile(r"years-as-twitch-staff|^staff$|^admin$", _re.I)
 _STATUS_SETS = {
     "staff", "admin", "global_mod", "moderator", "broadcaster", "vip", "partner",
     "turbo", "ambassador", "verified", "no_audio", "no_video", "game-developer",
     "twitch-recap", "clip-champ", "artist-badge", "extension", "moments",
+    "prime-gaming", "premium",
 }
 
 
+def _badge_category(sid: str, desc: str) -> str:
+    """Use the badge's own description ("how it's earned") to categorise."""
+    d = (desc or "").lower()
+    if "cheer" in d or "bits" in d or sid.startswith("bits"):
+        return "bits"
+    if "subscrib" in d or "gift" in d or "subscription" in d:
+        return "subscription"
+    if "watch" in d or "tuning in" in d or "tune in" in d or "tuned in" in d or "viewing" in d:
+        return "watch"
+    if sid in _STATUS_SETS or _re.search(r"staff|moderator|broadcaster|partner|turbo|admin|ambassador", sid):
+        return "status"
+    return "other"
+
+
 async def get_badges(_request: web.Request) -> web.Response:
-    """All Twitch badges, categorised, with which ones you own."""
+    """All Twitch badges, categorised by how they're earned, with ownership."""
     global _http
     if _http is None:
         _http = aiohttp.ClientSession()
-    cats: dict[str, list] = {"watch": [], "subscription": [], "bits": [], "status": []}
+    cats: dict[str, list] = {"watch": [], "subscription": [], "bits": [], "status": [], "other": []}
 
-    # which badges does the signed-in user own?
     owned: set[str] = set()
     try:
         data = await _gql_auth({"query": "{currentUser{availableBadges{setID}}}"})
@@ -351,7 +362,7 @@ async def get_badges(_request: web.Request) -> web.Response:
         async with _http.post(
             "https://gql.twitch.tv/gql",
             headers={"Client-ID": TWITCH_CLIENT_ID},
-            json={"query": "{badges{setID version title imageURL}}"},
+            json={"query": "{badges{setID version title imageURL description}}"},
             timeout=aiohttp.ClientTimeout(total=10),
         ) as resp:
             data = await resp.json()
@@ -361,18 +372,12 @@ async def get_badges(_request: web.Request) -> web.Response:
             if not sid or sid in seen:
                 continue
             seen.add(sid)
+            desc = b.get("description") or ""
             entry = {
-                "id": sid, "title": b.get("title") or sid,
-                "image": b.get("imageURL"), "owned": sid in owned,
+                "id": sid, "title": b.get("title") or sid, "image": b.get("imageURL"),
+                "description": desc, "owned": sid in owned,
             }
-            if _SUB_RE.search(sid):
-                cats["subscription"].append(entry)
-            elif _BITS_RE.search(sid):
-                cats["bits"].append(entry)
-            elif sid in _STATUS_SETS or _STAFF_RE.search(sid):
-                cats["status"].append(entry)
-            else:
-                cats["watch"].append(entry)
+            cats[_badge_category(sid, desc)].append(entry)
         for k in cats:
             cats[k].sort(key=lambda e: (not e["owned"], e["title"].lower()))
     except Exception:

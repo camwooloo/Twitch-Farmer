@@ -120,6 +120,7 @@ export interface BadgeItem {
   id: string;
   title: string;
   image: string | null;
+  description: string;
   owned: boolean;
 }
 export interface BadgeCategories {
@@ -127,6 +128,7 @@ export interface BadgeCategories {
   subscription: BadgeItem[];
   bits: BadgeItem[];
   status: BadgeItem[];
+  other: BadgeItem[];
 }
 
 const MAX_LOGS = 1000;
@@ -251,7 +253,7 @@ export const useStore = create<AppState>((set, get) => ({
       const res = await get().api("/api/twitch/badges");
       return (await res.json()).categories as BadgeCategories;
     } catch {
-      return { watch: [], subscription: [], bits: [], status: [] };
+      return { watch: [], subscription: [], bits: [], status: [], other: [] };
     }
   },
 

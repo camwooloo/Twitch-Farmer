@@ -4,6 +4,26 @@ import { open } from "@tauri-apps/plugin-shell";
 import { useStore, isNewer } from "../lib/store";
 import { Button } from "./ui";
 
+// render inline markdown: **bold**, `code`, [text](url)
+function Inline({ text }: { text: string }) {
+  const parts: React.ReactNode[] = [];
+  const re = /\*\*([^*]+)\*\*|`([^`]+)`|\[([^\]]+)\]\(([^)]+)\)/g;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  let k = 0;
+  while ((m = re.exec(text))) {
+    if (m.index > last) parts.push(text.slice(last, m.index));
+    if (m[1]) parts.push(<b key={k++} className="text-[var(--color-text)]">{m[1]}</b>);
+    else if (m[2]) parts.push(<code key={k++} className="rounded bg-[var(--color-bg)] px-1 text-[var(--color-accent-soft)]">{m[2]}</code>);
+    else if (m[3]) parts.push(
+      <a key={k++} href={m[4]} target="_blank" rel="noreferrer" className="text-[var(--color-accent-soft)] underline">{m[3]}</a>,
+    );
+    last = re.lastIndex;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+  return <>{parts}</>;
+}
+
 // minimal markdown-ish renderer for GitHub release notes
 export function ReleaseNotes({ notes }: { notes: string }) {
   const lines = (notes || "").split("\n");
@@ -14,18 +34,18 @@ export function ReleaseNotes({ notes }: { notes: string }) {
         if (!line.trim()) return <div key={i} className="h-1.5" />;
         if (/^#{1,6}\s/.test(line))
           return (
-            <div key={i} className="pt-1 text-[var(--color-text)] font-semibold">
-              {line.replace(/^#{1,6}\s/, "")}
+            <div key={i} className="pt-1.5 text-[var(--color-text)] font-semibold">
+              <Inline text={line.replace(/^#{1,6}\s/, "")} />
             </div>
           );
         if (/^[-*]\s/.test(line))
           return (
             <div key={i} className="flex gap-2 pl-1">
               <span className="text-[var(--color-accent-soft)]">•</span>
-              <span>{line.replace(/^[-*]\s/, "")}</span>
+              <span><Inline text={line.replace(/^[-*]\s/, "")} /></span>
             </div>
           );
-        return <div key={i}>{line}</div>;
+        return <div key={i}><Inline text={line} /></div>;
       })}
     </div>
   );

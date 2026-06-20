@@ -1216,11 +1216,17 @@ class Twitch:
                 # badge confirmation?
             ):
                 self.change_state(State.INVENTORY_FETCH)
-                await self.gql_request(
-                    GQL_QUERIES["NotificationsDelete"].with_variables(
-                        {"input": {"id": data["id"]}}
+                # Twitch frequently reports the notification as already gone
+                # ("notification not found"); the inventory refresh above is what
+                # matters, so this cleanup is best-effort and non-fatal.
+                try:
+                    await self.gql_request(
+                        GQL_QUERIES["NotificationsDelete"].with_variables(
+                            {"input": {"id": data["id"]}}
+                        )
                     )
-                )
+                except Exception:
+                    pass
 
     async def get_auth(self) -> _AuthState:
         await self._auth_state.validate()

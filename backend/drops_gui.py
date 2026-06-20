@@ -51,6 +51,20 @@ def _iso(dt: Any) -> str:
         return ""
 
 
+def _benefit_category(benefits: Any) -> str:
+    """badge / emote / reward, based on DevilXD's BenefitType."""
+    types = set()
+    for b in benefits or []:
+        t = _g(b, "type")
+        val = str(_g(t, "value", default=t) or "").upper()
+        types.add(val)
+    if "BADGE" in types:
+        return "badge"
+    if "EMOTE" in types:
+        return "emote"
+    return "reward"
+
+
 # --------------------------------------------------------------------------- #
 # sub components
 # --------------------------------------------------------------------------- #
@@ -137,6 +151,7 @@ class InventoryOverview:
                 "required": _g(d, "required_minutes", default=0),
                 "claimed": bool(_g(d, "is_claimed", default=False)),
                 "image": str(_g(benefits[0], "image_url", default="")) if benefits else "",
+                "category": _benefit_category(benefits),
             })
         game = _g(campaign, "game")
         emit(
@@ -152,6 +167,7 @@ class InventoryOverview:
             total=_g(campaign, "total_drops", default=len(drops)),
             active=bool(_g(campaign, "active", default=False)),
             finished=bool(_g(campaign, "finished", default=False)),
+            linked=bool(_g(campaign, "linked", default=True)),
             drops=drops,
         )
 

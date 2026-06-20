@@ -318,6 +318,67 @@ async def search_channels(request: web.Request) -> web.Response:
 # --------------------------------------------------------------------------- #
 # Analytics — read the points-over-time series the miner records
 # --------------------------------------------------------------------------- #
+GITHUB_REPO = "camwooloo/Twitch-Farmer"
+
+
+async def get_updates(_request: web.Request) -> web.Response:
+    """List GitHub releases (newest first) with notes + installer asset URL."""
+    global _http
+    if _http is None:
+        _http = aiohttp.ClientSession()
+    out: list[dict] = []
+    try:
+        async with _http.get(
+            f"https://api.github.com/repos/{GITHUB_REPO}/releases",
+            headers={"Accept": "application/vnd.github+json", "User-Agent": "TwitchFarmer"},
+            timeout=aiohttp.ClientTimeout(total=10),
+        ) as resp:
+            data = await resp.json()
+        for r in data if isinstance(data, list) else []:
+            if r.get("draft"):
+                continue
+            exe = next(
+                (a["browser_download_url"] for a in r.get("assets", [])
+                 if a.get("name", "").lower().endswith(".exe")),
+                None,
+            )
+            out.append({
+                "tag": r.get("tag_name", ""),
+                "name": r.get("name") or r.get("tag_name", ""),
+                "notes": r.get("body", ""),
+                "date": r.get("published_at", ""),
+                "exe_url": exe,
+                "html_url": r.get("html_url", ""),
+            })
+    except Exception:
+        pass
+    return web.json_response({"releases": out})
+
+
+async def download_update(request: web.Request) -> web.Response:
+    """Download a release installer to temp and return its path (so the UI can run it)."""
+    body = await request.json()
+    url = body.get("url", "")
+    # only allow our own release assets
+    if not url.startswith(f"https://github.com/{GITHUB_REPO}/releases/download/"):
+        return web.json_response({"error": "invalid url"}, status=400)
+    global _http
+    if _http is None:
+        _http = aiohttp.ClientSession()
+    import tempfile
+    try:
+        dest = os.path.join(tempfile.gettempdir(), os.path.basename(url))
+        async with _http.get(url, timeout=aiohttp.ClientTimeout(total=120)) as resp:
+            if resp.status != 200:
+                return web.json_response({"error": f"http {resp.status}"}, status=502)
+            with open(dest, "wb") as fh:
+                async for chunk in resp.content.iter_chunked(1 << 16):
+                    fh.write(chunk)
+        return web.json_response({"path": dest})
+    except Exception as exc:  # noqa: BLE001
+        return web.json_response({"error": str(exc)}, status=500)
+
+
 async def get_analytics(_request: web.Request) -> web.Response:
     cfg = cfgmod.load_config()
     base = cfgmod.data_dir() / "analytics" / (cfg.username or "")
@@ -384,6 +445,8 @@ def make_app() -> web.Application:
         web.get("/api/twitch/channels", search_channels),
         web.get("/api/twitch/follows", get_follows),
         web.get("/api/twitch/channel", get_channel),
+        web.get("/api/updates", get_updates),
+        web.post("/api/update/download", download_update),
         web.get("/api/analytics", get_analytics),
         web.get("/ws", ws_handler),
     ])

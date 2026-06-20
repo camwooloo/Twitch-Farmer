@@ -4,6 +4,7 @@ import { useStore } from "../lib/store";
 import { Section, Field, Toggle, Select, TextInput, Badge } from "../components/ui";
 import { Account } from "./Account";
 import { Notifications } from "./Notifications";
+import { ReleaseNotes } from "../components/UpdateModal";
 
 function GroupLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -21,9 +22,54 @@ const ACCENTS = [
   { value: "#4f8cff", label: "Azure" },
 ];
 
+function Changelog() {
+  const releases = useStore((s) => s.releases);
+  const [openTag, setOpenTag] = useState<string | null>(null);
+  if (releases.length === 0) {
+    return (
+      <Section title="Release history" description="Patch notes for every version.">
+        <p className="py-2 text-center text-xs text-[var(--color-muted)]">
+          No releases found (offline, or none published yet).
+        </p>
+      </Section>
+    );
+  }
+  return (
+    <Section title="Release history" description="Patch notes for every version.">
+      <div className="space-y-2">
+        {releases.map((r, i) => {
+          const open = openTag === r.tag || (openTag === null && i === 0);
+          return (
+            <div key={r.tag} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)]">
+              <button
+                onClick={() => setOpenTag(open ? "__none__" : r.tag)}
+                className="flex w-full items-center justify-between gap-2 p-3 text-left"
+              >
+                <span className="flex items-center gap-2">
+                  <Badge tone="accent">{r.tag}</Badge>
+                  <span className="text-sm font-medium">{r.name}</span>
+                </span>
+                <span className="text-xs text-[var(--color-muted)]">
+                  {r.date ? new Date(r.date).toLocaleDateString() : ""}
+                </span>
+              </button>
+              {open && (
+                <div className="border-t border-[var(--color-border)] p-3">
+                  <ReleaseNotes notes={r.notes} />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </Section>
+  );
+}
+
 export function Settings() {
   const config = useStore((s) => s.config)!;
   const save = useStore((s) => s.saveConfig);
+  const currentVersion = useStore((s) => s.currentVersion);
   const app = config.app;
   const [autostartReady, setAutostartReady] = useState(false);
 
@@ -168,8 +214,11 @@ export function Settings() {
         />
       </Section>
 
+      <GroupLabel>What's new</GroupLabel>
+      <Changelog />
+
       <div className="flex items-center gap-2 pb-4 text-xs text-[var(--color-muted)]">
-        <Badge tone="neutral">v0.1.0</Badge>
+        <Badge tone="neutral">v{currentVersion || "0.1.0"}</Badge>
         Config stored in %APPDATA%\TwitchFarmer\config.json
       </div>
     </div>

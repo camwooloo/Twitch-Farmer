@@ -1,5 +1,7 @@
 import { create } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
+import { getVersion } from "@tauri-apps/api/app";
+import { open as shellOpen } from "@tauri-apps/plugin-shell";
 import type { Config, EngineState, LogEntry, DeepPartial } from "./types";
 
 interface BackendInfo {
@@ -18,6 +20,7 @@ export interface DropInfo {
   required: number;
   claimed: boolean;
   image?: string;
+  category?: "badge" | "emote" | "reward";
 }
 export interface CampaignInfo {
   id: string;
@@ -31,6 +34,7 @@ export interface CampaignInfo {
   total: number;
   active: boolean;
   finished: boolean;
+  linked?: boolean;
   drops: DropInfo[];
 }
 export interface ClaimedDrop {
@@ -83,6 +87,23 @@ interface AppState {
   loadFollows: () => Promise<void>;
   loadChannelInfo: (login: string) => void;
   loadGameIcon: (name: string) => void;
+
+  // updates
+  currentVersion: string;
+  releases: Release[];
+  updateDismissed: boolean;
+  loadReleases: () => Promise<void>;
+  installUpdate: (url: string) => Promise<void>;
+  dismissUpdate: () => void;
+}
+
+export interface Release {
+  tag: string;
+  name: string;
+  notes: string;
+  date: string;
+  exe_url: string | null;
+  html_url: string;
 }
 
 export interface ChannelInfo {
@@ -114,6 +135,9 @@ export const useStore = create<AppState>((set, get) => ({
   followsLoaded: false,
   channelInfo: {},
   gameIcons: {},
+  currentVersion: "",
+  releases: [],
+  updateDismissed: false,
 
   init: async () => {
     let info: BackendInfo;
@@ -127,6 +151,12 @@ export const useStore = create<AppState>((set, get) => ({
     await waitForBackend(info);
     connectWs(info, set, get);
     await get().loadConfig();
+    try {
+      set({ currentVersion: await getVersion() });
+    } catch {
+      /* non-Tauri dev */
+    }
+    get().loadReleases();
   },
 
   api: async (path, init) => {
@@ -235,7 +265,41 @@ export const useStore = create<AppState>((set, get) => ({
       .catch(() => set({ gameIcons: { ...get().gameIcons, [name]: null } }))
       .finally(() => gameInflight.delete(name));
   },
+
+  loadReleases: async () => {
+    try {
+      const res = await get().api("/api/updates");
+      set({ releases: (await res.json()).releases ?? [] });
+    } catch {
+      /* offline */
+    }
+  },
+
+  installUpdate: async (url) => {
+    const res = await get().api("/api/update/download", {
+      method: "POST",
+      body: JSON.stringify({ url }),
+    });
+    const { path, error } = await res.json();
+    if (error || !path) throw new Error(error || "download failed");
+    await shellOpen(path); // launches the NSIS installer; it updates in place
+  },
+
+  dismissUpdate: () => set({ updateDismissed: true }),
 }));
+
+// "v1.2.3" -> [1,2,3]; higher tuple wins
+function parseVer(v: string): number[] {
+  return (v || "").replace(/^v/i, "").split(".").map((n) => parseInt(n, 10) || 0);
+}
+export function isNewer(a: string, b: string): boolean {
+  const pa = parseVer(a), pb = parseVer(b);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const x = pa[i] ?? 0, y = pb[i] ?? 0;
+    if (x !== y) return x > y;
+  }
+  return false;
+}
 
 // shared concurrency limiters + in-flight de-dup for live lookups
 function makeLimiter(limit: number) {
@@ -406,6 +470,7 @@ function handleDropsEvent(
         total: evt.total ?? 0,
         active: !!evt.active,
         finished: !!evt.finished,
+        linked: evt.linked,
         drops: evt.drops ?? [],
       };
       const idx = live.campaigns.findIndex((x) => x.id === c.id);

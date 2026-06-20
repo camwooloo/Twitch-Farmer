@@ -163,7 +163,8 @@ class DropsSettings:
     priority_games: list[str] = field(default_factory=list)
     mine_all: bool = True             # mine every available campaign, priority first
     exclude: list[str] = field(default_factory=list)
-    priority_mode: str = "PRIORITY_ONLY"  # PRIORITY_ONLY, ENDING_SOONEST, LOW_AVBL_FIRST
+    # ordering of non-priority games when mine_all is on: ENDING_SOONEST, LOW_AVBL_FIRST
+    priority_mode: str = "ENDING_SOONEST"
     farm_badges: bool = True          # always include badge/emote-only campaigns
     proxy: str = ""
 

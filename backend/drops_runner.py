@@ -90,8 +90,18 @@ def run(config_path: str) -> None:
     settings.available_drops_check = bool(drops_cfg.get("mine_all", True))
     settings.connection_quality = 1
     settings.proxy = URL(drops_cfg.get("proxy", "") or "")
-    mode = drops_cfg.get("priority_mode", "PRIORITY_ONLY")
-    settings.priority_mode = getattr(PriorityMode, mode, PriorityMode.PRIORITY_ONLY)
+
+    # Reconcile mine_all with priority_mode: PRIORITY_ONLY restricts mining to the
+    # priority list, which contradicts "mine all". When mining everything, fall
+    # back to an all-games ordering (ending soonest by default).
+    mine_all = bool(drops_cfg.get("mine_all", True))
+    if mine_all:
+        mode = drops_cfg.get("priority_mode", "ENDING_SOONEST")
+        if mode == "PRIORITY_ONLY":
+            mode = "ENDING_SOONEST"
+        settings.priority_mode = getattr(PriorityMode, mode, PriorityMode.ENDING_SOONEST)
+    else:
+        settings.priority_mode = PriorityMode.PRIORITY_ONLY
 
     logging.basicConfig(level=logging.INFO, format="%(message)s", stream=sys.stdout)
 

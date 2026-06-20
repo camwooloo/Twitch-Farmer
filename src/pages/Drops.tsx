@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   Plus, Trash2, Gift, Tv, CheckCircle2, ChevronUp, ChevronDown, Clock, Link2,
 } from "lucide-react";
@@ -10,7 +10,6 @@ import { move, reorder } from "../lib/move";
 import { useSortable } from "../lib/useSortable";
 
 const PRIORITY_MODES = [
-  { value: "PRIORITY_ONLY", label: "Priority list only" },
   { value: "ENDING_SOONEST", label: "Campaigns ending soonest" },
   { value: "LOW_AVBL_FIRST", label: "Low availability first" },
 ];
@@ -152,8 +151,16 @@ function CampaignCard({
   onAdd: () => void;
 }) {
   const ends = endsIn(c.ends_at);
+  const done = c.finished || (c.total > 0 && c.claimed >= c.total);
+  const needsLink = c.linked === false && !done;
+  const farmable = c.active && c.linked !== false && !done;
   return (
-    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-3">
+    <div
+      className={
+        "rounded-xl border bg-[var(--color-surface-2)] p-3 " +
+        (needsLink ? "border-[var(--color-warn)]/40" : "border-[var(--color-border)]")
+      }
+    >
       <div className="flex items-start gap-3">
         {c.image ? (
           <img src={c.image} alt="" className="h-16 w-12 shrink-0 rounded-md object-cover" />
@@ -169,22 +176,30 @@ function CampaignCard({
               <div className="truncate text-xs text-[var(--color-muted)]">{c.name}</div>
             </div>
             <div className="flex shrink-0 items-center gap-1.5">
-              {c.active && <Badge tone="good">live</Badge>}
-              <Badge tone={c.finished ? "good" : "neutral"}>{c.claimed}/{c.total}</Badge>
+              {done ? (
+                <Badge tone="good">complete</Badge>
+              ) : needsLink ? (
+                <Badge tone="warn">link needed</Badge>
+              ) : farmable ? (
+                <Badge tone="good">farmable</Badge>
+              ) : !c.active ? (
+                <Badge tone="neutral">ended</Badge>
+              ) : null}
+              <Badge tone="neutral">{c.claimed}/{c.total}</Badge>
             </div>
           </div>
-          <div className="mt-1 flex items-center gap-3 text-[11px] text-[var(--color-muted)]">
+          <div className="mt-1.5 flex items-center gap-3 text-[11px] text-[var(--color-muted)]">
             {ends && (
               <span className="flex items-center gap-1">
                 <Clock size={11} /> {ends}
               </span>
             )}
-            {c.link_url && (
+            {needsLink && c.link_url && (
               <button
                 onClick={() => open(c.link_url!).catch(() => {})}
-                className="flex items-center gap-1 hover:text-[var(--color-text)]"
+                className="flex items-center gap-1 rounded-md bg-[var(--color-warn)]/15 px-2 py-0.5 font-medium text-[var(--color-warn)] hover:bg-[var(--color-warn)]/25"
               >
-                <Link2 size={11} /> link account
+                <Link2 size={11} /> Link account to farm
               </button>
             )}
             <button
@@ -233,11 +248,19 @@ function CampaignCard({
   );
 }
 
+const CAMPAIGN_FILTERS = [
+  { key: "all", label: "All" },
+  { key: "farmable", label: "Farmable now" },
+  { key: "link", label: "Need linking" },
+  { key: "badges", label: "Badges & emotes" },
+];
+
 function LiveDrops() {
   const live = useStore((s) => s.dropsLive);
   const drops = useStore((s) => s.drops);
   const config = useStore((s) => s.config)!;
   const save = useStore((s) => s.saveConfig);
+  const [filter, setFilter] = useState("all");
   if (!drops.running && !live.loginCode && live.campaigns.length === 0) return null;
 
   const priority = config.drops.priority_games;
@@ -245,6 +268,18 @@ function LiveDrops() {
     if (!game || priority.includes(game)) return;
     save({ drops: { priority_games: [...priority, game] } });
   };
+
+  const isDone = (c: (typeof live.campaigns)[number]) =>
+    c.finished || (c.total > 0 && c.claimed >= c.total);
+  const farmableCount = live.campaigns.filter((c) => c.active && c.linked !== false && !isDone(c)).length;
+  const linkCount = live.campaigns.filter((c) => c.linked === false && !isDone(c)).length;
+
+  const filtered = live.campaigns.filter((c) => {
+    if (filter === "farmable") return c.active && c.linked !== false && !isDone(c);
+    if (filter === "link") return c.linked === false && !isDone(c);
+    if (filter === "badges") return c.drops.some((d) => d.category === "badge" || d.category === "emote");
+    return true;
+  });
 
   return (
     <div className="space-y-6">
@@ -288,12 +323,40 @@ function LiveDrops() {
 
       {live.campaigns.length > 0 && (
         <Section
-          title="All live drop campaigns"
-          description="Every drop campaign currently on Twitch. Add any game to your farm list."
-          right={<Badge tone="accent">{live.campaigns.length}</Badge>}
+          title="Live drop campaigns"
+          description="Campaigns in your inventory. Only active, account-linked ones are auto-farmed."
+          right={
+            <span className="flex items-center gap-1.5 text-xs">
+              <Badge tone="good">{farmableCount} farmable</Badge>
+              {linkCount > 0 && <Badge tone="warn">{linkCount} need link</Badge>}
+            </span>
+          }
         >
+          {linkCount > 0 && filter !== "link" && (
+            <div className="rounded-lg border border-[var(--color-warn)]/30 bg-[var(--color-warn)]/10 p-2.5 text-xs text-[var(--color-muted)]">
+              <b className="text-[var(--color-text)]">{linkCount} active campaign(s) need account linking.</b>{" "}
+              Twitch only awards drops for games you've linked your account to — click “Link account
+              to farm” on a campaign, link it on Twitch, then it'll be farmed automatically.
+            </div>
+          )}
+          <div className="flex flex-wrap gap-1.5">
+            {CAMPAIGN_FILTERS.map((f) => (
+              <button
+                key={f.key}
+                onClick={() => setFilter(f.key)}
+                className={
+                  "rounded-lg px-2.5 py-1 text-xs transition " +
+                  (filter === f.key
+                    ? "bg-[var(--color-accent)]/20 text-[var(--color-accent-soft)]"
+                    : "border border-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-text)]")
+                }
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
           <div className="grid grid-cols-1 gap-2.5">
-            {sortCampaigns(live.campaigns).map((c) => (
+            {sortCampaigns(filtered).map((c) => (
               <CampaignCard
                 key={c.id}
                 c={c}
@@ -301,6 +364,11 @@ function LiveDrops() {
                 onAdd={() => addToPriority(c.game)}
               />
             ))}
+            {filtered.length === 0 && (
+              <p className="py-4 text-center text-xs text-[var(--color-muted)]">
+                No campaigns match this filter.
+              </p>
+            )}
           </div>
         </Section>
       )}
@@ -323,7 +391,7 @@ export function Drops() {
       >
         <Toggle
           label="Mine all available campaigns"
-          description="Automatically farm every campaign you're eligible for, prioritising your list below."
+          description="Farm every campaign you're eligible for, your priority games first. Turn OFF to farm only your priority list."
           checked={drops.mine_all}
           onChange={(v) => save({ drops: { mine_all: v } })}
         />
@@ -333,13 +401,21 @@ export function Drops() {
           checked={drops.farm_badges}
           onChange={(v) => save({ drops: { farm_badges: v } })}
         />
-        <Field label="Selection mode" hint="how the next campaign is chosen">
-          <Select
-            value={drops.priority_mode}
-            options={PRIORITY_MODES}
-            onChange={(e) => save({ drops: { priority_mode: e.target.value } })}
-          />
-        </Field>
+        {drops.mine_all ? (
+          <Field label="Order other games by" hint="after your priority games">
+            <Select
+              value={drops.priority_mode}
+              options={PRIORITY_MODES}
+              onChange={(e) => save({ drops: { priority_mode: e.target.value } })}
+            />
+          </Field>
+        ) : (
+          <p className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-soft)] p-2.5 text-xs text-[var(--color-muted)]">
+            Only your priority games below will be farmed. Many campaigns (Riot, Ubisoft, EA…) also
+            require <b className="text-[var(--color-text)]">linking your Twitch account</b> to the game
+            on the campaign's page before drops can be earned.
+          </p>
+        )}
       </Section>
 
       <Section

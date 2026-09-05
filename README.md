@@ -1,34 +1,52 @@
+<div align="center">
+
+<img src="app-icon.png" width="96" height="96" alt="Twitch Farmer logo" />
+
 # Twitch Farmer
 
-A beautiful Windows desktop app that farms **Twitch channel points** (watch
-streaks, raids, predictions/bets, moments) **and Twitch drops** (campaign
-farming with game selection, badges & emotes) — with run-on-startup, start-in-tray
-and a one-click installer.
+**Farm Twitch channel points, predictions and drops from one beautiful window.**
 
-It wraps two proven open-source miners behind one polished UI:
+A Windows desktop app in the Aurora family — Rust + Tauri with a liquid‑glass
+React UI. It wraps two proven open‑source miners behind one polished interface,
+with run‑on‑startup, a system tray, LAN multi‑PC control and a one‑click
+per‑user installer.
 
-- **Points & predictions** — [rdavydov/Twitch-Channel-Points-Miner-v2](https://github.com/rdavydov/Twitch-Channel-Points-Miner-v2) (GPLv3)
-- **Drops campaigns** — [DevilXD/TwitchDropsMiner](https://github.com/DevilXD/TwitchDropsMiner) (GPLv3), run **headless** (its tkinter GUI is replaced by an event adapter)
+![Platform](https://img.shields.io/badge/platform-Windows-6c5ce7)
+![Built with Rust](https://img.shields.io/badge/built%20with-Rust-orange)
+![Tauri 2](https://img.shields.io/badge/shell-Tauri%202-24C8DB)
+![No admin](https://img.shields.io/badge/install-per--user%2C%20no%20admin-4c9a6a)
+![License](https://img.shields.io/badge/license-GPLv3-8a8a8a)
 
-![Twitch Farmer](docs/screenshot.png)
+</div>
 
-## Download
+---
 
-Grab the latest installer from the [**Releases**](https://github.com/camwooloo/Twitch-Farmer/releases/latest) page — run it (per-user, no admin needed). Requires the WebView2 runtime (preinstalled on Windows 10/11).
+<div align="center">
+<img src="docs/screenshot.png" width="880" alt="Twitch Farmer — dashboard" />
+</div>
 
 ## Features
 
-- 🎛 **Full configuration UI** — account, streamer list, per-streamer overrides,
-  betting strategies & filters, watch-streak/raids/moments, six notification
-  providers (Telegram, Discord, Webhook, Matrix, Pushover, Gotify), logging.
-- 🎁 **Drops farming** — pick priority games or mine *all* available campaigns,
-  exclude games, live campaign / drop / badge & emote progress.
-- 🔑 **Device-code login** — no password needed; open the activation page and
-  enter the code shown in-app.
-- 🪟 **System tray** — close/minimize to tray, restore on click, quit.
-- 🚀 **Run on Windows startup** and **start in tray** (start hidden, keep mining).
-- 🎨 Modern dark UI with selectable accent colour.
-- 📦 **One-file installer** (NSIS), installs per-user (no admin required).
+- 🌌 **Aurora design** — liquid glass over a slowly animated aurora backdrop. Dark / light
+  themes, three backdrops, a motion toggle and accent colours (Settings → Appearance).
+- 🪙 **Points & predictions** — watch streaks, raids, moments and auto‑bets with strategies
+  and filters, plus per‑streamer overrides and a followed‑channels browser.
+- 🎁 **Drops** — mine your priority games or every available campaign, badges & emotes
+  included, with live per‑drop progress. Campaigns farm even before you link a game
+  account — linking is only needed to *claim* the reward.
+- 🏅 **Badges** — watch‑time vs subscription badges, what you own, and how each is earned.
+- 🖥️ **Multi‑PC** — Twitch Farmer instances discover each other on your LAN; switch to
+  another PC from the title bar to view and control it.
+- 🔑 **Device‑code login** — no password stored; enter the code the app shows you.
+- 🔔 **Notifications** — Telegram, Discord, Webhook, Matrix, Pushover, Gotify.
+- 🪟 **System tray** — close / minimize to tray, run on Windows startup, start in tray.
+- ⬆️ **Auto‑update** from GitHub Releases, with patch notes shown in‑app.
+
+## Download
+
+Grab the latest installer from the [**Releases**](https://github.com/camwooloo/Twitch-Farmer/releases/latest)
+page and run it — installs per‑user, no admin needed. Requires the WebView2 runtime
+(preinstalled on Windows 10/11).
 
 ## How it works
 
@@ -107,3 +125,13 @@ npm run tauri dev
 ## License
 
 GPLv3, inherited from both upstream projects.
+
+## Credits
+
+- Points & predictions engine — [rdavydov/Twitch-Channel-Points-Miner-v2](https://github.com/rdavydov/Twitch-Channel-Points-Miner-v2) (GPLv3)
+- Drops engine — [DevilXD/TwitchDropsMiner](https://github.com/DevilXD/TwitchDropsMiner) (GPLv3), run headless
+- Design system shared with [Aurora Launcher](https://github.com/camwooloo/MCLauncher) and [Aurora PDF](https://github.com/camwooloo/Aurora-PDF)
+
+## License
+
+GPLv3 — see [LICENSE](LICENSE).

@@ -6,10 +6,10 @@
 
 **Farm Twitch channel points, predictions and drops from one beautiful window.**
 
-A Windows desktop app in the Aurora family — Rust + Tauri with a liquid‑glass
-React UI. It wraps two proven open‑source miners behind one polished interface,
-with run‑on‑startup, a system tray, LAN multi‑PC control and a one‑click
-per‑user installer.
+A Windows desktop app in the Aurora family — Rust + Tauri with a React UI on the
+shared Aurora design system. It wraps two proven open‑source miners behind one
+polished interface, with run‑on‑startup, a system tray, LAN multi‑PC control and a
+one‑click per‑user installer.
 
 ![Platform](https://img.shields.io/badge/platform-Windows-6c5ce7)
 ![Built with Rust](https://img.shields.io/badge/built%20with-Rust-orange)
@@ -22,21 +22,39 @@ per‑user installer.
 ---
 
 <div align="center">
-<img src="docs/screenshot.png" width="880" alt="Twitch Farmer — dashboard" />
+<img src="docs/screenshots/dashboard.jpg" width="880" alt="Twitch Farmer — dashboard while farming: one-click Start/Stop, engine cards, Drops watching a channel while Points is held" />
 </div>
+
+<table>
+<tr>
+<td width="50%"><img src="docs/screenshots/drops.jpg" alt="Drops" /><br/><sub><b>Drops</b> — what is being watched right now, live per‑drop progress, and every campaign in your inventory with filters for farming / not linked / badges &amp; emotes.</sub></td>
+<td width="50%"><img src="docs/screenshots/points.jpg" alt="Points" /><br/><sub><b>Points</b> — the channels being farmed in priority order, with live balances, drag‑and‑drop reordering and one‑click open‑stream.</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/screenshots/badges.jpg" alt="Badges" /><br/><sub><b>Badges</b> — every global Twitch badge, what you own, how each is earned, and badge drops the miner is farming for you right now.</sub></td>
+<td width="50%"><img src="docs/screenshots/predictions.jpg" alt="Predictions" /><br/><sub><b>Predictions</b> — auto‑betting with a strategy, percentage, caps, delay mode and stealth mode, plus skip filters.</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/screenshots/settings.jpg" alt="Settings — Appearance" /><br/><sub><b>Appearance</b> — dark / light theme, three backdrops, a motion toggle and accent colours; plus LAN sharing to control your other PCs.</sub></td>
+<td width="50%"><img src="docs/screenshots/logs.jpg" alt="Logs" /><br/><sub><b>Logs</b> — live output from both miners in a glass console, filterable by source and pausable.</sub></td>
+</tr>
+</table>
 
 ## Features
 
-- 🌌 **Aurora design** — liquid glass over a slowly animated aurora backdrop. Dark / light
-  themes, three backdrops, a motion toggle and accent colours (Settings → Appearance).
 - 🪙 **Points & predictions** — watch streaks, raids, moments and auto‑bets with strategies
   and filters, plus per‑streamer overrides and a followed‑channels browser.
-- 🎁 **Drops** — mine your priority games or every available campaign, badges & emotes
+- 🎁 **Drops** — mine your priority games or every available campaign, badges &amp; emotes
   included, with live per‑drop progress. Campaigns farm even before you link a game
   account — linking is only needed to *claim* the reward.
+- 🥇 **Drops come first** — Twitch only credits watch‑time to a couple of channels per
+  account at once, so while Drops runs, Points is held and resumes automatically the
+  moment Drops stops.
 - 🏅 **Badges** — watch‑time vs subscription badges, what you own, and how each is earned.
 - 🖥️ **Multi‑PC** — Twitch Farmer instances discover each other on your LAN; switch to
   another PC from the title bar to view and control it.
+- 🌌 **Aurora design** — the shared Aurora look: dark / light themes, three backdrops, a
+  motion toggle and accent colours (Settings → Appearance).
 - 🔑 **Device‑code login** — no password stored; enter the code the app shows you.
 - 🔔 **Notifications** — Telegram, Discord, Webhook, Matrix, Pushover, Gotify.
 - 🪟 **System tray** — close / minimize to tray, run on Windows startup, start in tray.

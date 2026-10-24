@@ -24,7 +24,7 @@ function Inline({ text }: { text: string }) {
   return <>{parts}</>;
 }
 
-// minimal markdown-ish renderer for GitHub release notes
+// minimal markdown-ish renderer for release notes
 export function ReleaseNotes({ notes }: { notes: string }) {
   const lines = (notes || "").split("\n");
   return (
@@ -162,7 +162,7 @@ export function UpdateModal() {
             </Button>
           )}
           <Button variant="ghost" onClick={() => open(latest.html_url).catch(() => {})}>
-            <ExternalLink size={14} /> GitHub
+            <ExternalLink size={14} /> Releases
           </Button>
           <Button variant="ghost" onClick={dismiss}>Later</Button>
         </div>

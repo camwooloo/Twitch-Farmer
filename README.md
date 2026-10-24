@@ -58,11 +58,11 @@ one‑click per‑user installer.
 - 🔑 **Device‑code login** — no password stored; enter the code the app shows you.
 - 🔔 **Notifications** — Telegram, Discord, Webhook, Matrix, Pushover, Gotify.
 - 🪟 **System tray** — close / minimize to tray, run on Windows startup, start in tray.
-- ⬆️ **Auto‑update** from GitHub Releases, with patch notes shown in‑app.
+- ⬆️ **Auto‑update** from [camwooloo.com](https://camwooloo.com/projects/twitch-farmer/releases), with patch notes shown in‑app.
 
 ## Download
 
-Grab the latest installer from the [**Releases**](https://github.com/camwooloo/Twitch-Farmer/releases/latest)
+Grab the latest installer from the [**Releases**](https://camwooloo.com/projects/twitch-farmer/releases)
 page and run it — installs per‑user, no admin needed. Requires the WebView2 runtime
 (preinstalled on Windows 10/11).
 

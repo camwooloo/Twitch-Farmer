@@ -18,6 +18,8 @@ import json
 import os
 import sys
 from dataclasses import asdict
+from html.parser import HTMLParser
+from urllib.parse import unquote, urljoin, urlparse
 
 import aiohttp
 from aiohttp import web, WSMsgType
@@ -386,37 +388,120 @@ async def get_badges(_request: web.Request) -> web.Response:
     return web.json_response({"categories": cats, "owned_count": len(owned)})
 
 
-GITHUB_REPO = "camwooloo/Twitch-Farmer"
+# Updates come from the portfolio site, which mirrors the GitHub releases (the
+# repo itself is private, so its release API and asset URLs aren't reachable).
+UPDATES_SITE = "https://camwooloo.com"
+UPDATES_SLUG = "twitch-farmer"
+UPDATES_FEED = f"{UPDATES_SITE}/api/projects?repo={UPDATES_SLUG}"
+UPDATES_PAGE = f"{UPDATES_SITE}/projects/{UPDATES_SLUG}/releases"
+UPDATES_DOWNLOAD_PREFIX = f"{UPDATES_SITE}/projects/{UPDATES_SLUG}/download/"
+
+
+class _NotesToMarkdown(HTMLParser):
+    """Turn the site's rendered release notes (HTML) back into the small
+    markdown subset the UI's ReleaseNotes renderer understands."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.lines: list[str] = []
+        self.cur = ""
+        self.href: str | None = None
+        self.link_text = ""
+
+    def _flush(self) -> None:
+        line = " ".join(self.cur.split())
+        if line:
+            self.lines.append(line)
+        self.cur = ""
+
+    def _emit(self, text: str) -> None:
+        if self.href is not None:
+            self.link_text += text
+        else:
+            self.cur += text
+
+    def handle_starttag(self, tag, attrs):
+        if tag in ("p", "div", "ul", "ol", "br", "tr"):
+            self._flush()
+        elif tag in ("h1", "h2", "h3", "h4", "h5", "h6"):
+            self._flush()
+            self.cur = "## "
+        elif tag == "li":
+            self._flush()
+            self.cur = "- "
+        elif tag in ("strong", "b"):
+            self._emit("**")
+        elif tag == "code":
+            self._emit("`")
+        elif tag == "a":
+            href = dict(attrs).get("href") or ""
+            self.href = urljoin(UPDATES_SITE, href) if href else ""
+            self.link_text = ""
+
+    def handle_endtag(self, tag):
+        if tag in ("p", "div", "li", "ul", "ol", "tr", "h1", "h2", "h3", "h4", "h5", "h6"):
+            self._flush()
+            if tag in ("p", "ul", "ol", "h1", "h2", "h3", "h4", "h5", "h6"):
+                self.lines.append("")
+        elif tag in ("strong", "b"):
+            self._emit("**")
+        elif tag == "code":
+            self._emit("`")
+        elif tag == "a" and self.href is not None:
+            href, text = self.href, self.link_text
+            self.href = None
+            self.cur += f"[{text}]({href})" if href.startswith(("http://", "https://")) else text
+
+    def handle_data(self, data):
+        self._emit(data)
+
+    def markdown(self) -> str:
+        self._flush()
+        out: list[str] = []
+        for line in self.lines:
+            if line or (out and out[-1]):
+                out.append(line)
+        return "\n".join(out).strip()
+
+
+def _notes_markdown(html: str) -> str:
+    parser = _NotesToMarkdown()
+    try:
+        parser.feed(html or "")
+        parser.close()
+    except Exception:  # noqa: BLE001
+        return ""
+    return parser.markdown()
 
 
 async def get_updates(_request: web.Request) -> web.Response:
-    """List GitHub releases (newest first) with notes + installer asset URL."""
+    """List releases from the portfolio site (newest first) with notes + installer URL."""
     global _http
     if _http is None:
         _http = aiohttp.ClientSession()
     out: list[dict] = []
     try:
         async with _http.get(
-            f"https://api.github.com/repos/{GITHUB_REPO}/releases",
-            headers={"Accept": "application/vnd.github+json", "User-Agent": "TwitchFarmer"},
+            UPDATES_FEED,
+            headers={"Accept": "application/json", "User-Agent": "TwitchFarmer"},
             timeout=aiohttp.ClientTimeout(total=10),
         ) as resp:
-            data = await resp.json()
-        for r in data if isinstance(data, list) else []:
-            if r.get("draft"):
-                continue
+            data = await resp.json(content_type=None)
+        project = (data or {}).get("project") or {}
+        for r in project.get("releases") or []:
             exe = next(
-                (a["browser_download_url"] for a in r.get("assets", [])
-                 if a.get("name", "").lower().endswith(".exe")),
+                (a.get("url") for a in r.get("assets") or []
+                 if a.get("name", "").lower().endswith(".exe") and a.get("url")),
                 None,
             )
             out.append({
-                "tag": r.get("tag_name", ""),
-                "name": r.get("name") or r.get("tag_name", ""),
-                "notes": r.get("body", ""),
-                "date": r.get("published_at", ""),
-                "exe_url": exe,
-                "html_url": r.get("html_url", ""),
+                "tag": r.get("tag", ""),
+                "name": r.get("name") or r.get("tag", ""),
+                "notes": _notes_markdown(r.get("notesHtml", "")),
+                "date": r.get("publishedAt", ""),
+                "exe_url": urljoin(UPDATES_SITE, exe) if exe else None,
+                # the GitHub release URL is blank once the repo is private
+                "html_url": r.get("url") or UPDATES_PAGE,
             })
     except Exception:
         pass
@@ -427,16 +512,23 @@ async def download_update(request: web.Request) -> web.Response:
     """Download a release installer to temp and return its path (so the UI can run it)."""
     body = await request.json()
     url = body.get("url", "")
-    # only allow our own release assets
-    if not url.startswith(f"https://github.com/{GITHUB_REPO}/releases/download/"):
+    # only allow our own release assets (served via the portfolio site's download route)
+    if not url.startswith(UPDATES_DOWNLOAD_PREFIX):
+        return web.json_response({"error": "invalid url"}, status=400)
+    name = os.path.basename(unquote(urlparse(url).path))
+    if not name.lower().endswith(".exe"):
         return web.json_response({"error": "invalid url"}, status=400)
     global _http
     if _http is None:
         _http = aiohttp.ClientSession()
     import tempfile
     try:
-        dest = os.path.join(tempfile.gettempdir(), os.path.basename(url))
-        async with _http.get(url, timeout=aiohttp.ClientTimeout(total=120)) as resp:
+        dest = os.path.join(tempfile.gettempdir(), name)
+        # the site answers with a redirect to the actual asset; aiohttp follows it
+        async with _http.get(
+            url, headers={"User-Agent": "TwitchFarmer"},
+            timeout=aiohttp.ClientTimeout(total=120),
+        ) as resp:
             if resp.status != 200:
                 return web.json_response({"error": f"http {resp.status}"}, status=502)
             with open(dest, "wb") as fh:
@@ -545,7 +637,7 @@ async def _on_startup(_app: web.Application) -> None:
 
 def main() -> None:
     global TOKEN
-    # Use the OS certificate store so HTTPS (GitHub API, Twitch GQL) works
+    # Use the OS certificate store so HTTPS (update feed, Twitch GQL) works
     # reliably across machines, even in the frozen build.
     try:
         import truststore
